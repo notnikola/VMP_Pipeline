@@ -1,0 +1,30 @@
+# OS / editor artifacts
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Raw and enriched vulnerability data
+*.csv
+!companies.example.csv
+*.xlsx
+*.xls
+
+# Generated HTML reports
+*_report.html
+vulnerability_reports/
+
+# Dated snapshot directories (YYYY-MM-DD pattern)
+[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]/
+
+# Environment / secrets
+.env
+*.env.*

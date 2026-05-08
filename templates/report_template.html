@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ team_name }} Vulnerability Report</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #1a1a1a; color: #f5f5f5; }
+        .tab-content > .tab-pane { padding: 20px 0; }
+        .chart-container { margin-bottom: 40px; }
+        .table-container { margin-bottom: 40px; }
+        h1, h2, h3, h4 { color: #e0e0e0; }
+        .nav-tabs .nav-link { color: #e0e0e0; background-color: #333; border-color: #444; }
+        .nav-tabs .nav-link.active { background-color: #1a1a1a; border-color: #444; border-bottom-color: #1a1a1a; }
+        .table { color: #f5f5f5; }
+        .table-striped tbody tr:nth-of-type(odd) { background-color: #2a2a2a; }
+        .table-bordered { border: 1px solid #444; }
+        .table-bordered th, .table-bordered td { border: 1px solid #444; }
+        .thead-dark th { background-color: #333; border-color: #444; }
+        .clickable-cell { cursor: pointer; }
+        .clickable-cell:hover { background-color: #3a3a3a; } /* Darker hover effect */
+        .collapse-arrow {
+            display: inline-block;
+            transition: transform 0.2s ease-in-out;
+            color: #f5f5f5;
+        }
+        .rotated-arrow {
+            transform: rotate(180deg);
+        }
+        #remediationModal .modal-content {
+            background-color: #2a2a2a;
+            color: #f5f5f5;
+        }
+        #remediationModal .modal-header {
+            border-bottom: 1px solid #444;
+        }
+        #remediationModal .modal-footer {
+            border-top: 1px solid #444;
+        }
+        #remediationModal .modal-title {
+            color: #e0e0e0;
+        }
+        #remediationModal .modal-body pre,
+        .table-responsive .collapse pre {
+            background-color: #3a3a3a !important;
+            color: #f5f5f5;
+            border: 1px solid #555 !important;
+        }
+        .btn-info {
+            color: #fff;
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+        }
+        .btn-secondary {
+            color: #fff;
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        .stat-card {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            height: 100%; /* Ensure cards in a row have equal height */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .stat-card h4 {
+            color: #82c0ff; /* An accent color */
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        .stat-card p {
+            color: #f5f5f5;
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h1>{{ team_name }} Vulnerability Report</h1>
+
+        <ul class="nav nav-tabs" id="severityTabs" role="tablist">
+            {% for severity in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] %}
+                {% if reports_data[severity] %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if loop.first %}active{% endif %}" id="{{ severity|lower }}-tab" data-toggle="tab" href="#{{ severity|lower }}" role="tab" aria-controls="{{ severity|lower }}" aria-selected="{% if loop.first %}true{% else %}false{% endif %}">{{ severity }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+
+        <div class="tab-content" id="severityTabContent">
+            {% for severity in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] %}
+                {% if reports_data[severity] %}
+                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ severity|lower }}" role="tabpanel" aria-labelledby="{{ severity|lower }}-tab">
+                        <h2>{{ severity }} Vulnerabilities</h2>
+
+                        <div class="row text-center mb-4">
+                            <div class="col-md-4">
+                                <div class="stat-card">
+                                    <h4>Distinct CVEs</h4>
+                                    <p>{{ reports_data[severity]['severity_stats']['distinct_cves'] }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card">
+                                    <h4>Open Instances</h4>
+                                    <p>{{ reports_data[severity]['severity_stats']['open_instances'] }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card">
+                                    <h4>Longest Open CVE Age (Days)</h4>
+                                    <p>{{ reports_data[severity]['severity_stats']['longest_open_cve_age'] }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h3>Average Time to Resolve Vulnerabilities by Month</h3>
+                        <div class="chart-container">
+                            {{ reports_data[severity]['average_time_to_resolve_chart'] | safe }}
+                        </div>
+
+                        <h3>Remediation Status Over Time</h3>
+                        <div class="chart-container">
+                            {{ reports_data[severity]['remediation_chart'] | safe }}
+                        </div>
+
+                        <h3>New Vulnerabilities Found by Month</h3>
+                        <div class="chart-container">
+                            {{ reports_data[severity]['new_vuln_chart'] | safe }}
+                        </div>
+
+                        <h3>Top 10 CVEs by Affected Devices</h3>
+                        <h4>Remediate these in order of Affected Devices count.</h4>
+                        <div class="table-responsive table-container">
+                            <table class="table table-striped table-bordered">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>CVE UID</th>
+                                        <th>Age (Days)</th>
+                                        <th>Affected Devices Count</th>
+                                        <th>Affected Devices List</th>
+                                        <th>Remediation</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cve in reports_data[severity]['top_cves'] %}
+                                       <tr>
+                                           <td>{{ cve.cve_uid }}</td>
+                                           <td>{{ cve.cve_age_days }}</td>
+                                           <td>{{ cve.affected_devices_count }}</td>
+                                           <td class="clickable-cell" data-toggle="collapse" data-target="#collapse{{ cve.cve_uid.replace('-', '') }}" aria-expanded="false" aria-controls="collapse{{ cve.cve_uid.replace('-', '') }}" role="button">
+                                               View Devices <span class="float-right collapse-arrow">&#9660;</span>
+                                           </td>
+                                           <td>
+                                               <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#remediationModal" data-remediation="{{ cve.remediation_recommendation | e}}">View</button>
+                                           </td>
+                                       </tr>
+                                       <tr class="collapse" id="collapse{{ cve.cve_uid.replace('-', '') }}">
+                                           <td colspan="4">
+                                               <pre style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ced4da;">{{ cve.device_list_content }}</pre>
+                                           </td>
+                                       </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h3>Oldest 10 CVEs</h3>
+                        <h4>Remediate these in order of age, oldest to newest.</h4>
+                        <div class="table-responsive table-container">
+                            <table class="table table-striped table-bordered">
+                                 <thead class="thead-dark">
+                                     <tr>
+                                         <th>CVE UID</th>
+                                         <th>Age (Days)</th>
+                                         <th>Affected Devices Count</th>
+                                         <th>Affected Devices List</th>
+                                         <th>Remediation</th>
+                                     </tr>
+                                  </thead>
+                                  <tbody>
+                                      {% for cve in reports_data[severity]['oldest_cves'] %}
+                                          <tr>
+                                              <td>{{ cve.cve_uid }}</td>
+                                              <td>{{ cve.cve_age_days }}</td>
+                                              <td>{{ cve.affected_devices_count }}</td>
+                                              <td class="clickable-cell" data-toggle="collapse" data-target="#collapse{{ cve.cve_uid.replace('-', '') }}" aria-expanded="false" aria-controls="collapse{{ cve.cve_uid.replace('-', '') }}" role="button">
+                                                View Devices <span class="float-right collapse-arrow">&#9660;</span>
+                                             </td>
+                                             <td>
+                                                 <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#remediationModal" data-remediation="{{ cve.remediation_recommendation | e}}">View</button>
+                                             </td>
+                                         </tr>
+                                         <tr class="collapse" id="collapse{{ cve.cve_uid.replace('-', '') }}">
+                                              <td colspan="4">
+                                                  <pre style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ced4da;">{{ cve.device_list_content }}</pre>
+                                              </td>
+                                          </tr>
+                                      {% endfor %}
+                                  </tbody>
+                             </table>
+                         </div>
+
+                        <h3>New CVEs This Month</h3>
+                        <div class="table-responsive table-container">
+                            <table class="table table-striped table-bordered">
+                                 <thead class="thead-dark">
+                                     <tr>
+                                         <th>CVE UID</th>
+                                         <th>Age (Days)</th>
+                                         <th>Affected Devices Count</th>
+                                         <th>Affected Devices List</th>
+                                         <th>Remediation</th>
+                                     </tr>
+                                  </thead>
+                                  <tbody>
+                                      {% for cve in reports_data[severity]['new_cves_this_month'] %}
+                                          <tr>
+                                              <td>{{ cve.cve_uid }}</td>
+                                              <td>{{ cve.cve_age_days }}</td>
+                                              <td>{{ cve.affected_devices_count }}</td>
+                                              <td class="clickable-cell" data-toggle="collapse" data-target="#collapseNew{{ cve.cve_uid.replace('-', '') }}" aria-expanded="false" aria-controls="collapseNew{{ cve.cve_uid.replace('-', '') }}" role="button">
+                                                View Devices <span class="float-right collapse-arrow">&#9660;</span>
+                                             </td>
+                                             <td>
+                                                 <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#remediationModal" data-remediation="{{ cve.remediation_recommendation | e}}">View</button>
+                                             </td>
+                                         </tr>
+                                         <tr class="collapse" id="collapseNew{{ cve.cve_uid.replace('-', '') }}">
+                                              <td colspan="4">
+                                                  <pre style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #ced4da;">{{ cve.device_list_content }}</pre>
+                                              </td>
+                                          </tr>
+                                      {% endfor %}
+                                  </tbody>
+                             </table>
+                         </div>
+                     </div>
+                 {% endif %}
+             {% endfor %}
+         </div>
+     </div>
+    <!-- Remediation Modal -->
+    <div class="modal fade" id="remediationModal" tabindex="-1" role="dialog" aria-labelledby="remediationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="remediationModalLabel">Remediation Recommendation</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="remediationContent"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+     <script>
+        $(document).ready(function() {
+            // Add a class to the clickable cell when collapsed is active
+            $('.table').on('shown.bs.collapse', function(e) {
+                var targetCollapseId = $(e.target).attr('id');
+                $('[data-target="#' + targetCollapseId + '"] .collapse-arrow').addClass('rotated-arrow');
+            });
+
+            $('.table').on('hidden.bs.collapse', function(e) {
+                var targetCollapseId = $(e.target).attr('id');
+                $('[data-target="#' + targetCollapseId + '"] .collapse-arrow').removeClass('rotated-arrow');
+            });
+
+            // Re-render plotly charts when a tab is shown
+            $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+                var targetTabPane = $($(e.target).attr('href')); // Activated tab pane
+                targetTabPane.find('.chart-container').each(function() {
+                    // Find the actual Plotly chart div within the container, it's nested
+                    var chartDiv = $(this).find('.js-plotly-plot')[0];
+                    if (chartDiv) {
+                        Plotly.Plots.resize(chartDiv);
+                    } else {
+                        console.log("Plotly chart div (.js-plotly-plot) not found within container:", this);
+                    }
+                });
+            });
+       });
+
+        $('#remediationModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget); // Button that triggered the modal
+            var remediation = button.data('remediation'); // Extract info from data-* attributes
+            var modal = $(this);
+            modal.find('#remediationContent').html(remediation || 'No remediation provided.'); // Allow HTML rendering, no <pre> tags, add fallback
+        });
+     </script>
+</body>
+</html>
