@@ -53,6 +53,19 @@ $results = Import-Csv -Path $ComputersCsv | ForEach-Object {
             $device.Boundaries = "Infrastructure Team"
             if ($hostname -like "rl*" -and (-not ($hostname -in @("rlqappvintd01","rlqappvextt01","rlqappvextt02","rlqappvextp01","rlqappvextp02","dfstmpvintd01","rlxenvintp01")))) {
                 $division = "RL"
+            } else {
+                try {
+                    $computerName = $device.Name.Split('.')[0]
+                    $managedByDN = (Get-ADComputer -Identity $computerName -Property ManagedBy).ManagedBy
+                    if ($managedByDN -eq "CN=OIT Windows Admin,OU=Office Information Technology Groups,OU=Security Groups,DC=fldoi,DC=gov") {
+                        $device.Boundaries = "Windows Server Team"
+                    } else {
+                        $device.Boundaries = "Open Systems and Storage Team"
+                    }
+                }
+                catch {
+                    Write-Warning "Could not process computer: $($device.Name) - $($_.Exception.Message)"
+                }
             }
         }
     } elseif ($device.Category -eq "Handhelds" -and $device.'Data Sources' -and "Microsoft Intune" -in $device.'Data Sources'.split(", ")) {
