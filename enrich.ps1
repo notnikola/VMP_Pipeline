@@ -79,7 +79,9 @@ $results = Import-Csv -Path $ComputersCsv | ForEach-Object {
         elseif  ($division -eq "CID") { $report = "CID Desktop" }
         elseif  ($division -eq "RL")  { $report = "RL Desktop"  }
     } elseif ($device.Boundaries -eq "Infrastructure Team") {
-        if      ($division -eq "OIT") { $report = "OIT Infrastructure" }
+        if      ($division -eq "OIT") {
+            if ($device.Boundaries -eq "Windows Server Team") { $report = "OIT Windows Server Team" }
+            else {$report = "OIT Open Systems and Storage Team"}
         elseif  ($division -eq "RL")  { $report = "RL Infrastructure"  }
     } elseif ($device.Boundaries -eq "Mobile Devices Team") {
         $report = "OIT Mobile Devices"
